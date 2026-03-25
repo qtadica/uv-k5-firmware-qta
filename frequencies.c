@@ -203,10 +203,13 @@ int32_t TX_freq_check(const uint32_t Frequency)
             break;
 
         case F_LOCK_CE:
+        // 1. Allow European VHF Ham (2m)
             if (Frequency >= 14400000 && Frequency < 14600000)
                 return 0;
+            // 2. Allow European UHF Ham (70cm)
             if (Frequency >= 43000000 && Frequency < 44000000)
                 return 0;
+            // 3. ALLOW PMR446 (This is qta’s custom addition!) 
             if (Frequency >= 44600625 && Frequency <= 44619375)
                 return 0;
             break;
