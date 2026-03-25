@@ -3,6 +3,7 @@ name: Build Firmware
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -15,7 +16,7 @@ jobs:
     - name: Compile firmware
       run: |
         chmod +x compile-with-docker.sh
-        ./compile-with-docker.sh
+        ./compile-with-docker.sh custom
 
     - name: Upload firmware artifact
       uses: actions/upload-artifact@v4
