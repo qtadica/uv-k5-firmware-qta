@@ -24,6 +24,9 @@
 #include "version.h"
 #include "bitmaps.h"
 
+// Define our own safe buffer here so we don't get "undeclared" errors
+static char s_WelcomeBuffer[32];
+
 void UI_DisplayReleaseKeys(void)
 {
     UI_DisplayClear();
@@ -36,33 +39,50 @@ void UI_DisplayWelcome(void)
     UI_DisplayClear();
     memset(gStatusLine, 0, sizeof(gStatusLine));
 
-    // 1. DRAW LOGO (Safe flat copy)
+    // 1. DRAW LOGO (Using the flat pointer logic that we know works)
     memcpy(gStatusLine, g_qta_logo_short, 128);
     memcpy(gFrameBuffer, g_qta_logo_short + 128, 256);
 
-    // 2. CHIRP LINE 1 (Using shared global memory so we don't crash the radio)
-    memset(gString, 0, sizeof(gString));
-    EEPROM_ReadBuffer(0x0EB0, gString, 16);
-    if (gString[0] != 0xFF && gString[0] != 0x00) {
-        gString[16] = '\0'; 
-        UI_PrintStringSmallNormal(gString, 0, 127, 4);
+    // 2. CHIRP LINE 1
+    memset(s_WelcomeBuffer, 0, sizeof(s_WelcomeBuffer));
+    EEPROM_ReadBuffer(0x0EB0, s_WelcomeBuffer, 16);
+    
+    // Sanitize: Stop at the first weird character to prevent font-crash
+    for (int i = 0; i < 16; i++) {
+        if (s_WelcomeBuffer[i] < 32 || s_WelcomeBuffer[i] > 126) {
+            s_WelcomeBuffer[i] = '\0';
+            break;
+        }
+    }
+
+    if (strlen(s_WelcomeBuffer) > 0) {
+        UI_PrintStringSmallNormal(s_WelcomeBuffer, 0, 127, 4);
     } else {
         UI_PrintStringSmallNormal("QTA MOD", 0, 127, 4);
     }
 
-    // 3. CHIRP LINE 2 (Re-using the exact same memory)
-    memset(gString, 0, sizeof(gString));
-    EEPROM_ReadBuffer(0x0EC0, gString, 16);
-    if (gString[0] != 0xFF && gString[0] != 0x00) {
-        gString[16] = '\0';
-        UI_PrintStringSmallNormal(gString, 0, 127, 5);
+    // 3. CHIRP LINE 2
+    memset(s_WelcomeBuffer, 0, sizeof(s_WelcomeBuffer));
+    EEPROM_ReadBuffer(0x0EC0, s_WelcomeBuffer, 16);
+    
+    for (int i = 0; i < 16; i++) {
+        if (s_WelcomeBuffer[i] < 32 || s_WelcomeBuffer[i] > 126) {
+            s_WelcomeBuffer[i] = '\0';
+            break;
+        }
     }
 
-    // 4. VERSION & BATTERY VOLTAGE
-    // Re-using the same memory one last time. Removed % math to prevent division crashes.
-    memset(gString, 0, sizeof(gString));
-    sprintf(gString, "%s  %u.%02uV", Version, gBatteryVoltageAverage / 100, gBatteryVoltageAverage % 100);
-    UI_PrintStringSmallNormal(gString, 0, 127, 6);
+    if (strlen(s_WelcomeBuffer) > 0) {
+        UI_PrintStringSmallNormal(s_WelcomeBuffer, 0, 127, 5);
+    }
+
+    // 4. VERSION & BATTERY 
+    memset(s_WelcomeBuffer, 0, sizeof(s_WelcomeBuffer));
+    sprintf(s_WelcomeBuffer, "%s  %u.%02uV", 
+            Version, 
+            gBatteryVoltageAverage / 100, 
+            gBatteryVoltageAverage % 100);
+    UI_PrintStringSmallNormal(s_WelcomeBuffer, 0, 127, 6);
 
     // 5. PUSH TO SCREEN
     ST7565_BlitStatusLine();
