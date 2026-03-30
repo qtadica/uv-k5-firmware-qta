@@ -33,50 +33,45 @@ void UI_DisplayReleaseKeys(void)
 
 void UI_DisplayWelcome(void)
 {
-    char WelcomeString0[17];
-    char WelcomeString1[17];
-    char BatteryString[17];
+    // We make these buffers 32 to prevent any "spilling" (overflow)
+    char WelcomeString0[32];
+    char WelcomeString1[32];
+    char BatteryString[32];
 
     UI_DisplayClear();
-    
-    // 1. CLEAN THE STATUS BAR
     memset(gStatusLine, 0, sizeof(gStatusLine));
 
-    // 2. DRAW LOGO (Occupies Lines 0, 1, 2)
+    // 1. DRAW LOGO (Lines 0, 1, 2)
     memcpy(gStatusLine, g_qta_logo_short, 128);
     memcpy(gFrameBuffer[0], g_qta_logo_short + 128, 128);
     memcpy(gFrameBuffer[1], g_qta_logo_short + 256, 128);
 
-    // 3. GET DYNAMIC DATA
+    // 2. GET CHIRP DATA
     memset(WelcomeString0, 0, sizeof(WelcomeString0));
     memset(WelcomeString1, 0, sizeof(WelcomeString1));
     EEPROM_ReadBuffer(0x0EB0, WelcomeString0, 16);
     EEPROM_ReadBuffer(0x0EC0, WelcomeString1, 16);
 
-    // Prepare Battery/Version string
-    // Simplified to ensure it fits on one line without wrapping
+    // 3. PREPARE VERSION & BATT
+    // We use a safe sprintf that won't overflow our 32-byte buffer
     sprintf(BatteryString, "%s %u.%02uV %u%%", 
             Version,
             gBatteryVoltageAverage / 100, 
             gBatteryVoltageAverage % 100, 
             BATTERY_VoltsToPercent(gBatteryVoltageAverage));
 
-    // 4. PRINT TEXT IN THE REQUESTED ORDER
-    
-    // Fallbacks if CHIRP is empty
-if(strlen(WelcomeString0) == 0) strcpy(WelcomeString0, "NEW BUILD 02");
-if(strlen(WelcomeString1) == 0) strcpy(WelcomeString1, "TIME: 1:55AM");
-
-    // Line 4: CHIRP Message 1
+    // 4. PRINT TEXT IN ORDER
+    // Line 4: CHIRP 1
     UI_PrintStringSmallNormal(WelcomeString0, 0, 127, 4);
-    
-    // Line 5: CHIRP Message 2
+    // Line 5: CHIRP 2
     UI_PrintStringSmallNormal(WelcomeString1, 0, 127, 5);
-
-    // Line 6: Version and Battery (The Bottom Line)
-    UI_PrintStringSmallNormal(BatteryString,  0, 127, 6);
+    // Line 6: Version & Battery
+    UI_PrintStringSmallNormal(BatteryString, 0, 127, 6);
 
     // 5. THE PUSH
     ST7565_BlitStatusLine();
     ST7565_BlitFullScreen();
+    
+    // Tiny delay so the user can actually see the screen before it goes to the radio
+    // for (uint32_t i = 0; i < 1000000; i++) { __asm("nop"); }
 }
