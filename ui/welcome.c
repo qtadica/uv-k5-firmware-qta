@@ -49,8 +49,8 @@ void UI_DisplayReleaseKeys(void)
 
 void UI_DisplayWelcome(void)
 {
-    c// 1. Prepare the screen
-    memset(gStatusLine,  0, sizeof(gStatusLine));
+    // 1. Clear the status line and screen memory
+    memset(gStatusLine, 0, sizeof(gStatusLine));
 
     #if defined(ENABLE_FEAT_F4HWN_CTR) || defined(ENABLE_FEAT_F4HWN_INV)
         ST7565_ContrastAndInv();
@@ -58,17 +58,18 @@ void UI_DisplayWelcome(void)
 
     UI_DisplayClear();
 
-    // 2. Draw your custom PETER logo (128x64 pixels)
-    // This starts at coordinates 0,0 and fills the whole screen
-    ST7565_DrawBitmap(0, 0, 128, 64, g_boot_logo);
+    // 2. Copy your PETER logo directly into the screen buffer
+    // We use memcpy because it is the fastest way to "paste" the 1024 bytes
+    memcpy(gFrameBuffer, g_boot_logo, 1024);
 
-    // 3. Send the image to the physical LCD
+    // 3. Push the buffer to the physical LCD
     ST7565_BlitFullScreen();
 
     #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
         getScreenShot(true);
     #endif
-    } else {
+}
+else {
         memset(WelcomeString0, 0, sizeof(WelcomeString0));
         memset(WelcomeString1, 0, sizeof(WelcomeString1));
 
