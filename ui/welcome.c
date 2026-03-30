@@ -18,8 +18,10 @@
 #include "driver/eeprom.h"
 #include "driver/st7565.h"
 #include "external/printf/printf.h"
+#include "helper/battery.h"
 #include "ui/helper.h"
 #include "ui/welcome.h"
+#include "version.h"
 #include "bitmaps.h"
 
 void UI_DisplayReleaseKeys(void)
@@ -31,15 +33,41 @@ void UI_DisplayReleaseKeys(void)
 
 void UI_DisplayWelcome(void)
 {
-    UI_DisplayClear();
+    char WelcomeString0[17];
+    char WelcomeString1[17];
+    char BatteryString[32];
 
-    // 1. DRAW LOGO (Safe Flat Copy)
+    UI_DisplayClear();
+    memset(gStatusLine, 0, sizeof(gStatusLine));
+
+    // 1. DRAW LOGO (Using the flat memory logic that worked!)
     memcpy(gStatusLine, g_qta_logo_short, 128);
     memcpy(gFrameBuffer, g_qta_logo_short + 128, 256);
 
-    // 2. SIMPLE TEXT (No Battery/Version variables to be safe)
-    UI_PrintStringSmallNormal("QTA MOD ONLINE", 0, 127, 5);
+    // 2. READ CHIRP MESSAGES
+    memset(WelcomeString0, 0, sizeof(WelcomeString0));
+    memset(WelcomeString1, 0, sizeof(WelcomeString1));
+    EEPROM_ReadBuffer(0x0EB0, WelcomeString0, 16);
+    EEPROM_ReadBuffer(0x0EC0, WelcomeString1, 16);
 
+    // 3. PREPARE BATTERY & VERSION STRING
+    // Example: "v1.0  8.40V 100%"
+    sprintf(BatteryString, "%s  %u.%02uV %u%%", 
+            Version,
+            gBatteryVoltageAverage / 100, 
+            gBatteryVoltageAverage % 100, 
+            BATTERY_VoltsToPercent(gBatteryVoltageAverage));
+
+    // 4. PRINT TO SCREEN
+    // If CHIRP lines are empty, show a default message
+    if(strlen(WelcomeString0) == 0) strcpy(WelcomeString0, "QTA MOD");
+    if(strlen(WelcomeString1) == 0) strcpy(WelcomeString1, "READY");
+
+    UI_PrintStringSmallNormal(WelcomeString0, 0, 127, 4); // Line 4
+    UI_PrintStringSmallNormal(WelcomeString1, 0, 127, 5); // Line 5
+    UI_PrintStringSmallNormal(BatteryString,  0, 127, 7); // Line 7 (Bottom)
+
+    // 5. PUSH TO HARDWARE
     ST7565_BlitStatusLine();
     ST7565_BlitFullScreen();
 }
