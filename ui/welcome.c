@@ -18,46 +18,28 @@
 #include "driver/eeprom.h"
 #include "driver/st7565.h"
 #include "external/printf/printf.h"
-#include "helper/battery.h"
-#include "settings.h"
-#include "misc.h"
 #include "ui/helper.h"
 #include "ui/welcome.h"
-#include "ui/status.h"
-#include "version.h"
 #include "bitmaps.h"
 
 void UI_DisplayReleaseKeys(void)
 {
     UI_DisplayClear();
     UI_PrintString("RELEASE", 0, 127, 1, 10);
-    UI_PrintString("ALL KEYS", 0, 127, 3, 10);
     ST7565_BlitFullScreen();
 }
 
 void UI_DisplayWelcome(void)
 {
-    // We keep the variables very simple to prevent memory overflow
-    char WelcomeString[17];
-    
     UI_DisplayClear();
 
-    // 1. FLAT MEMORY LOGO DRAWING (The Safe Way)
-    // Copy first 128 bytes to status line
+    // 1. DRAW LOGO (Safe Flat Copy)
     memcpy(gStatusLine, g_qta_logo_short, 128);
-    // Copy the remaining 256 bytes to the start of the main buffer
     memcpy(gFrameBuffer, g_qta_logo_short + 128, 256);
 
-    // 2. DEBUG TEXT
-    // If you see "QTA-OK" on the screen, we know the new code is working!
-    UI_PrintStringSmallNormal("QTA-OK", 0, 127, 4);
+    // 2. SIMPLE TEXT (No Battery/Version variables to be safe)
+    UI_PrintStringSmallNormal("QTA MOD ONLINE", 0, 127, 5);
 
-    // 3. BATTERY (Minimalist to prevent sprintf crashes)
-    uint16_t volt = gBatteryVoltageAverage;
-    sprintf(WelcomeString, "%u.%02uV", volt / 100, volt % 100);
-    UI_PrintStringSmallNormal(WelcomeString, 0, 127, 6);
-
-    // 4. PUSH TO HARDWARE
     ST7565_BlitStatusLine();
     ST7565_BlitFullScreen();
 }
