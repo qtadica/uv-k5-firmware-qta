@@ -37,21 +37,46 @@ void UI_DisplayReleaseKeys(void)
 
 void UI_DisplayWelcome(void)
 {
-    char WelcomeString[17];
-    
+    char WelcomeString0[17];
+    char WelcomeString1[17];
+    char BatteryString[32];
+
     UI_DisplayClear();
 
-    // 1. SAFE LOGO DRAWING
-    // We only copy the first 128 bytes to the status line for now to test
+    // 1. DRAW THE LOGO (Safe Row-by-Row Copy)
+    // Row 0 (The Status Line)
     memcpy(gStatusLine, g_qta_logo_short, 128);
+    // Row 1 (The first line of the main screen)
+    memcpy(gFrameBuffer[0], g_qta_logo_short + 128, 128);
+    // Row 2 (The second line of the main screen)
+    memcpy(gFrameBuffer[1], g_qta_logo_short + 256, 128);
 
-    // 2. BASIC TEXT (No complex math/logic that could crash it)
-    UI_PrintString("QTA MOD v1.0", 0, 127, 2, 10);
-    
-    // Read one line from CHIRP just to see if it works
-    memset(WelcomeString, 0, sizeof(WelcomeString));
-    EEPROM_ReadBuffer(0x0EB0, WelcomeString, 16);
-    UI_PrintString(WelcomeString, 0, 127, 4, 10);
+    // 2. LOGIC FOR TEXT (Only if not set to NONE)
+    if (gEeprom.POWER_ON_DISPLAY_MODE != POWER_ON_DISPLAY_MODE_NONE) 
+    {
+        memset(WelcomeString0, 0, sizeof(WelcomeString0));
+        memset(WelcomeString1, 0, sizeof(WelcomeString1));
+
+        // Read CHIRP lines
+        EEPROM_ReadBuffer(0x0EB0, WelcomeString0, 16);
+        EEPROM_ReadBuffer(0x0EC0, WelcomeString1, 16);
+
+        // Prepare Battery + Version Line
+        sprintf(BatteryString, "%s  %u.%02uV %u%%", 
+                Version, 
+                gBatteryVoltageAverage / 100, 
+                gBatteryVoltageAverage % 100, 
+                BATTERY_VoltsToPercent(gBatteryVoltageAverage));
+
+        // Fallbacks if CHIRP is empty
+        if(strlen(WelcomeString0) == 0) strcpy(WelcomeString0, "WELCOME");
+        if(strlen(WelcomeString1) == 0) strcpy(WelcomeString1, "QTA MOD");
+
+        // 3. PRINT TEXT (Using Lines 4, 5, and 7 to stay away from the logo)
+        UI_PrintStringSmallNormal(WelcomeString0, 0, 127, 4);
+        UI_PrintStringSmallNormal(WelcomeString1, 0, 127, 5);
+        UI_PrintStringSmallNormal(BatteryString, 0, 127, 7);
+    }
 
     ST7565_BlitStatusLine();
     ST7565_BlitFullScreen();
