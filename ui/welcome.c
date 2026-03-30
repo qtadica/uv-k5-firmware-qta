@@ -37,44 +37,27 @@ void UI_DisplayReleaseKeys(void)
 
 void UI_DisplayWelcome(void)
 {
-    char WelcomeString0[17];
-    char WelcomeString1[17];
-    char BatteryString[32];
-
+    // We keep the variables very simple to prevent memory overflow
+    char WelcomeString[17];
+    
     UI_DisplayClear();
 
-    // 1. CLEAR THE STATUS BAR (Stops the battery icon from appearing over logo)
-    memset(gStatusLine, 0, sizeof(gStatusLine));
-
-    // 2. DRAW LOGO (Lines 0, 1, 2)
+    // 1. FLAT MEMORY LOGO DRAWING (The Safe Way)
+    // Copy first 128 bytes to status line
     memcpy(gStatusLine, g_qta_logo_short, 128);
-    memcpy(gFrameBuffer[0], g_qta_logo_short + 128, 128);
-    memcpy(gFrameBuffer[1], g_qta_logo_short + 256, 128);
+    // Copy the remaining 256 bytes to the start of the main buffer
+    memcpy(gFrameBuffer, g_qta_logo_short + 128, 256);
 
-    // 3. READ CHIRP TEXT
-    memset(WelcomeString0, 0, sizeof(WelcomeString0));
-    memset(WelcomeString1, 0, sizeof(WelcomeString1));
-    EEPROM_ReadBuffer(0x0EB0, WelcomeString0, 16);
-    EEPROM_ReadBuffer(0x0EC0, WelcomeString1, 16);
+    // 2. DEBUG TEXT
+    // If you see "QTA-OK" on the screen, we know the new code is working!
+    UI_PrintStringSmallNormal("QTA-OK", 0, 127, 4);
 
-    // 4. PREPARE VERSION & BATTERY (Now safe to include Version!)
-    // This will look like: "v1.0  8.40V 100%"
-    sprintf(BatteryString, "%s  %u.%02uV %u%%", 
-            Version,
-            gBatteryVoltageAverage / 100, 
-            gBatteryVoltageAverage % 100, 
-            BATTERY_VoltsToPercent(gBatteryVoltageAverage));
+    // 3. BATTERY (Minimalist to prevent sprintf crashes)
+    uint16_t volt = gBatteryVoltageAverage;
+    sprintf(WelcomeString, "%u.%02uV", volt / 100, volt % 100);
+    UI_PrintStringSmallNormal(WelcomeString, 0, 127, 6);
 
-    // 5. PRINT TEXT (Using Lines 4, 5, and 7 to stay away from the logo)
-    // If CHIRP lines are empty, we give them a default value
-    if(strlen(WelcomeString0) == 0) strcpy(WelcomeString0, "WELCOME");
-    if(strlen(WelcomeString1) == 0) strcpy(WelcomeString1, "QTA MOD");
-
-    UI_PrintStringSmallNormal(WelcomeString0, 0, 127, 4);
-    UI_PrintStringSmallNormal(WelcomeString1, 0, 127, 5);
-    UI_PrintStringSmallNormal(BatteryString,  0, 127, 7);
-
-    // 6. FINAL PUSH TO SCREEN
+    // 4. PUSH TO HARDWARE
     ST7565_BlitStatusLine();
     ST7565_BlitFullScreen();
 }
