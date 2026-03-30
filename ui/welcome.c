@@ -49,28 +49,25 @@ void UI_DisplayReleaseKeys(void)
 
 void UI_DisplayWelcome(void)
 {
-    char WelcomeString0[16];
-    char WelcomeString1[16];
-    char WelcomeString2[16];
-    char WelcomeString3[20];
-
+    c// 1. Prepare the screen
     memset(gStatusLine,  0, sizeof(gStatusLine));
 
-#if defined(ENABLE_FEAT_F4HWN_CTR) || defined(ENABLE_FEAT_F4HWN_INV)
+    #if defined(ENABLE_FEAT_F4HWN_CTR) || defined(ENABLE_FEAT_F4HWN_INV)
         ST7565_ContrastAndInv();
-#endif
+    #endif
+
     UI_DisplayClear();
 
-#ifdef ENABLE_FEAT_F4HWN
-    ST7565_BlitStatusLine();
+    // 2. Draw your custom PETER logo (128x64 pixels)
+    // This starts at coordinates 0,0 and fills the whole screen
+    ST7565_DrawBitmap(0, 0, 128, 64, g_boot_logo);
+
+    // 3. Send the image to the physical LCD
     ST7565_BlitFullScreen();
-    
-    if (gEeprom.POWER_ON_DISPLAY_MODE == POWER_ON_DISPLAY_MODE_NONE || gEeprom.POWER_ON_DISPLAY_MODE == POWER_ON_DISPLAY_MODE_SOUND) {
-        ST7565_FillScreen(0x00);
-#else
-    if (gEeprom.POWER_ON_DISPLAY_MODE == POWER_ON_DISPLAY_MODE_NONE || gEeprom.POWER_ON_DISPLAY_MODE == POWER_ON_DISPLAY_MODE_FULL_SCREEN) {
-        ST7565_FillScreen(0xFF);
-#endif
+
+    #ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
+        getScreenShot(true);
+    #endif
     } else {
         memset(WelcomeString0, 0, sizeof(WelcomeString0));
         memset(WelcomeString1, 0, sizeof(WelcomeString1));
