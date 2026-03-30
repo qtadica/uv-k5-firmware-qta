@@ -55,6 +55,6 @@ extern const uint8_t BITMAP_NOAA[12];
     extern const uint8_t BITMAP_CurrentIndicator[8];
 #endif
 
-#endif
-#endif:
 extern const uint8_t g_boot_logo[1024];
+
+#endif
