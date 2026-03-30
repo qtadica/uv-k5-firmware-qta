@@ -33,48 +33,38 @@ void UI_DisplayReleaseKeys(void)
 
 void UI_DisplayWelcome(void)
 {
-    char WelcomeString0[17];
-    char WelcomeString1[17];
-    char BatteryString[32];
-
     UI_DisplayClear();
     memset(gStatusLine, 0, sizeof(gStatusLine));
 
-    // 1. DRAW LOGO (Using the FLAT logic from your successful test)
+    // 1. DRAW LOGO (Safe flat copy)
     memcpy(gStatusLine, g_qta_logo_short, 128);
     memcpy(gFrameBuffer, g_qta_logo_short + 128, 256);
 
-    // 2. READ CHIRP DATA SAFELY
-    memset(WelcomeString0, 0, sizeof(WelcomeString0));
-    memset(WelcomeString1, 0, sizeof(WelcomeString1));
-    EEPROM_ReadBuffer(0x0EB0, WelcomeString0, 16);
-    EEPROM_ReadBuffer(0x0EC0, WelcomeString1, 16);
-
-    // 3. PREPARE VERSION & BATT (Safe length)
-    sprintf(BatteryString, "%s %u.%02uV %u%%", 
-            Version,
-            gBatteryVoltageAverage / 100, 
-            gBatteryVoltageAverage % 100, 
-            BATTERY_VoltsToPercent(gBatteryVoltageAverage));
-
-    // 4. PRINT TEXT (Avoiding the 'wrapping' Line 7)
-    
-    // If CHIRP line 1 is valid, show it, otherwise show default
-    if (WelcomeString0[0] != 0xFF && strlen(WelcomeString0) > 0) {
-        UI_PrintStringSmallNormal(WelcomeString0, 0, 127, 4);
+    // 2. CHIRP LINE 1 (Using shared global memory so we don't crash the radio)
+    memset(gString, 0, sizeof(gString));
+    EEPROM_ReadBuffer(0x0EB0, gString, 16);
+    if (gString[0] != 0xFF && gString[0] != 0x00) {
+        gString[16] = '\0'; 
+        UI_PrintStringSmallNormal(gString, 0, 127, 4);
     } else {
         UI_PrintStringSmallNormal("QTA MOD", 0, 127, 4);
     }
 
-    // If CHIRP line 2 is valid, show it
-    if (WelcomeString1[0] != 0xFF && strlen(WelcomeString1) > 0) {
-        UI_PrintStringSmallNormal(WelcomeString1, 0, 127, 5);
+    // 3. CHIRP LINE 2 (Re-using the exact same memory)
+    memset(gString, 0, sizeof(gString));
+    EEPROM_ReadBuffer(0x0EC0, gString, 16);
+    if (gString[0] != 0xFF && gString[0] != 0x00) {
+        gString[16] = '\0';
+        UI_PrintStringSmallNormal(gString, 0, 127, 5);
     }
 
-    // Always show the Version/Battery at the bottom (Line 6)
-    UI_PrintStringSmallNormal(BatteryString, 0, 127, 6);
+    // 4. VERSION & BATTERY VOLTAGE
+    // Re-using the same memory one last time. Removed % math to prevent division crashes.
+    memset(gString, 0, sizeof(gString));
+    sprintf(gString, "%s  %u.%02uV", Version, gBatteryVoltageAverage / 100, gBatteryVoltageAverage % 100);
+    UI_PrintStringSmallNormal(gString, 0, 127, 6);
 
-    // 5. THE PUSH
+    // 5. PUSH TO SCREEN
     ST7565_BlitStatusLine();
     ST7565_BlitFullScreen();
 }
