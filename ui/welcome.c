@@ -39,45 +39,34 @@ void UI_DisplayWelcome(void)
 {
     char WelcomeString0[17];
     char WelcomeString1[17];
-    char BatteryString[32];
+    char BatteryString[17];
 
     UI_DisplayClear();
 
-    // 1. DRAW THE LOGO (Safe Row-by-Row Copy)
-    // Row 0 (The Status Line)
+    // 1. DRAW LOGO (We know this works!)
     memcpy(gStatusLine, g_qta_logo_short, 128);
-    // Row 1 (The first line of the main screen)
     memcpy(gFrameBuffer[0], g_qta_logo_short + 128, 128);
-    // Row 2 (The second line of the main screen)
     memcpy(gFrameBuffer[1], g_qta_logo_short + 256, 128);
 
-    // 2. LOGIC FOR TEXT (Only if not set to NONE)
-    if (gEeprom.POWER_ON_DISPLAY_MODE != POWER_ON_DISPLAY_MODE_NONE) 
-    {
-        memset(WelcomeString0, 0, sizeof(WelcomeString0));
-        memset(WelcomeString1, 0, sizeof(WelcomeString1));
+    // 2. READ CHIRP TEXT
+    memset(WelcomeString0, 0, sizeof(WelcomeString0));
+    memset(WelcomeString1, 0, sizeof(WelcomeString1));
+    EEPROM_ReadBuffer(0x0EB0, WelcomeString0, 16);
+    EEPROM_ReadBuffer(0x0EC0, WelcomeString1, 16);
 
-        // Read CHIRP lines
-        EEPROM_ReadBuffer(0x0EB0, WelcomeString0, 16);
-        EEPROM_ReadBuffer(0x0EC0, WelcomeString1, 16);
+    // 3. PREPARE BATTERY TEXT (Simplified to prevent crashing)
+    sprintf(BatteryString, "%u.%02uV %u%%", 
+            gBatteryVoltageAverage / 100, 
+            gBatteryVoltageAverage % 100, 
+            BATTERY_VoltsToPercent(gBatteryVoltageAverage));
 
-        // Prepare Battery + Version Line
-        sprintf(BatteryString, "%s  %u.%02uV %u%%", 
-                Version, 
-                gBatteryVoltageAverage / 100, 
-                gBatteryVoltageAverage % 100, 
-                BATTERY_VoltsToPercent(gBatteryVoltageAverage));
+    // 4. PRINT TO SCREEN
+    // We use line 4, 5, and 7
+    UI_PrintStringSmallNormal(WelcomeString0, 0, 127, 4);
+    UI_PrintStringSmallNormal(WelcomeString1, 0, 127, 5);
+    UI_PrintStringSmallNormal(BatteryString,  0, 127, 7);
 
-        // Fallbacks if CHIRP is empty
-        if(strlen(WelcomeString0) == 0) strcpy(WelcomeString0, "WELCOME");
-        if(strlen(WelcomeString1) == 0) strcpy(WelcomeString1, "QTA MOD");
-
-        // 3. PRINT TEXT (Using Lines 4, 5, and 7 to stay away from the logo)
-        UI_PrintStringSmallNormal(WelcomeString0, 0, 127, 4);
-        UI_PrintStringSmallNormal(WelcomeString1, 0, 127, 5);
-        UI_PrintStringSmallNormal(BatteryString, 0, 127, 7);
-    }
-
+    // 5. THE PUSH (This MUST be the last part of the function)
     ST7565_BlitStatusLine();
     ST7565_BlitFullScreen();
 }
