@@ -27,79 +27,32 @@
 #include "version.h"
 #include "bitmaps.h"
 
-#ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
-    #include "screenshot.h"
-#endif
-
 void UI_DisplayReleaseKeys(void)
 {
-    memset(gStatusLine, 0, sizeof(gStatusLine));
-#if defined(ENABLE_FEAT_F4HWN_CTR) || defined(ENABLE_FEAT_F4HWN_INV)
-        ST7565_ContrastAndInv();
-#endif
     UI_DisplayClear();
-
     UI_PrintString("RELEASE", 0, 127, 1, 10);
     UI_PrintString("ALL KEYS", 0, 127, 3, 10);
-
-    ST7565_BlitStatusLine();
     ST7565_BlitFullScreen();
 }
 
 void UI_DisplayWelcome(void)
 {
-    char WelcomeString0[17];
-    char WelcomeString1[17];
-    char WelcomeString2[17];
-    char WelcomeString3[32];
-
-    memset(gStatusLine, 0, sizeof(gStatusLine));
-
-#if defined(ENABLE_FEAT_F4HWN_CTR) || defined(ENABLE_FEAT_F4HWN_INV)
-        ST7565_ContrastAndInv();
-#endif
+    char WelcomeString[17];
+    
     UI_DisplayClear();
 
-    // 1. DRAW THE QTA LOGO (Always visible at the top)
+    // 1. SAFE LOGO DRAWING
+    // We only copy the first 128 bytes to the status line for now to test
     memcpy(gStatusLine, g_qta_logo_short, 128);
-    memcpy(gFrameBuffer, g_qta_logo_short + 128, 256);
 
-    // 2. TEXT LOGIC
-    if (gEeprom.POWER_ON_DISPLAY_MODE != POWER_ON_DISPLAY_MODE_NONE && 
-        gEeprom.POWER_ON_DISPLAY_MODE != POWER_ON_DISPLAY_MODE_SOUND) 
-    {
-        memset(WelcomeString0, 0, sizeof(WelcomeString0));
-        memset(WelcomeString1, 0, sizeof(WelcomeString1));
+    // 2. BASIC TEXT (No complex math/logic that could crash it)
+    UI_PrintString("QTA MOD v1.0", 0, 127, 2, 10);
+    
+    // Read one line from CHIRP just to see if it works
+    memset(WelcomeString, 0, sizeof(WelcomeString));
+    EEPROM_ReadBuffer(0x0EB0, WelcomeString, 16);
+    UI_PrintString(WelcomeString, 0, 127, 4, 10);
 
-        // Read custom lines from CHIRP
-        EEPROM_ReadBuffer(0x0EB0, WelcomeString0, 16);
-        EEPROM_ReadBuffer(0x0EC0, WelcomeString1, 16);
-
-        // Prepare Battery Voltage string
-        sprintf(WelcomeString2, "%u.%02uV %u%%",
-                gBatteryVoltageAverage / 100,
-                gBatteryVoltageAverage % 100,
-                BATTERY_VoltsToPercent(gBatteryVoltageAverage));
-
-        // Create the Bottom Line: "v1.0  8.40V 100%"
-        sprintf(WelcomeString3, "%s  %s", Version, WelcomeString2);
-
-        // If CHIRP is empty, show default QTA text
-        if(strlen(WelcomeString0) == 0) strcpy(WelcomeString0, "WELCOME");
-        if(strlen(WelcomeString1) == 0) strcpy(WelcomeString1, "QTA MOD");
-
-        // 3. PRINT TO LCD (Positioned to avoid the logo)
-        // Lines 4 & 5 are for the message, Line 7 is for Version/Battery
-        UI_PrintStringSmallNormal(WelcomeString0, 0, 127, 4);
-        UI_PrintStringSmallNormal(WelcomeString1, 0, 127, 5);
-        UI_PrintStringSmallNormal(WelcomeString3, 0, 127, 7);
-    }
-
-    // 4. PUSH DATA TO LCD
     ST7565_BlitStatusLine();
     ST7565_BlitFullScreen();
-
-#ifdef ENABLE_FEAT_F4HWN_SCREENSHOT
-    getScreenShot(true);
-#endif
 }
