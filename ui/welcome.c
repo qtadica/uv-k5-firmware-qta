@@ -64,8 +64,8 @@ void UI_DisplayWelcome(void)
     // 4. PRINT TEXT IN THE REQUESTED ORDER
     
     // Fallbacks if CHIRP is empty
-    if(strlen(WelcomeString0) == 0) strcpy(WelcomeString0, "QTA MOD");
-    if(strlen(WelcomeString1) == 0) strcpy(WelcomeString1, "CUSTOM");
+if(strlen(WelcomeString0) == 0) strcpy(WelcomeString0, "NEW BUILD 02");
+if(strlen(WelcomeString1) == 0) strcpy(WelcomeString1, "TIME: 1:55AM");
 
     // Line 4: CHIRP Message 1
     UI_PrintStringSmallNormal(WelcomeString0, 0, 127, 4);
