@@ -15,7 +15,9 @@
  */
 
 #include <string.h>
+#include "driver/eeprom.h"
 #include "driver/st7565.h"
+#include "external/printf/printf.h"
 #include "ui/helper.h"
 #include "ui/welcome.h"
 #include "bitmaps.h"
@@ -30,17 +32,25 @@ void UI_DisplayReleaseKeys(void)
 void UI_DisplayWelcome(void)
 {
     UI_DisplayClear();
+    
+    // 1. CLEAN THE TOP
     memset(gStatusLine, 0, sizeof(gStatusLine));
 
-    // 1. DRAW LOGO
+    // 2. DRAW LOGO (Lines 0, 1, 2)
+    // We copy 128 bytes to each specific row to prevent "shifting"
     memcpy(gStatusLine, g_qta_logo_short, 128);
-    memcpy(gFrameBuffer, g_qta_logo_short + 128, 256);
+    memcpy(gFrameBuffer[0], g_qta_logo_short + 128, 128);
+    memcpy(gFrameBuffer[1], g_qta_logo_short + 256, 128);
 
-    // 2. DIAGNOSTIC TEXT (If you see this, it worked!)
-    UI_PrintStringSmallNormal("THIS IS THE NEW CODE", 0, 127, 4);
-    UI_PrintStringSmallNormal("IF YOU SEE THIS", 0, 127, 5);
-    UI_PrintStringSmallNormal("IT IS NOT HANGING", 0, 127, 7);
+    // 3. THE TEXT (Adjusted Line Numbers)
+    // We will use Line 4, 5, and 6. 
+    // If Line 7 was at the top, we stay away from it!
+    
+    UI_PrintStringSmallNormal("QTA MOD", 0, 127, 4);
+    UI_PrintStringSmallNormal("BOOTING...", 0, 127, 5);
+    UI_PrintStringSmallNormal("V1.0 READY", 0, 127, 6);
 
+    // 4. THE PUSH
     ST7565_BlitStatusLine();
     ST7565_BlitFullScreen();
 }
