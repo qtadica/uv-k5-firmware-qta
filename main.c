@@ -208,7 +208,7 @@ void Main(void)
         gDebounceCounter = 0;
     }
 
-    if (!gChargingWithTypeC && gBatteryDisplayLevel == 0)
+   if (!gChargingWithTypeC && gBatteryDisplayLevel == 0)
     {
         FUNCTION_Select(FUNCTION_POWER_SAVE);
 
@@ -221,13 +221,13 @@ void Main(void)
     }
     else
     {
-       #ifdef ENABLE_FEAT_F4HWN
+#ifdef ENABLE_FEAT_F4HWN
         if (gEeprom.POWER_ON_DISPLAY_MODE != POWER_ON_DISPLAY_MODE_NONE && gEeprom.POWER_ON_DISPLAY_MODE != POWER_ON_DISPLAY_MODE_SOUND)
 #else
         if (gEeprom.POWER_ON_DISPLAY_MODE != POWER_ON_DISPLAY_MODE_NONE)
 #endif
         {   
-            // We moved these inside the IF so they ONLY run if you didn't select NONE
+            // Draw the screen and wait ONLY if NOT set to NONE or SOUND
             UI_DisplayWelcome();
             BACKLIGHT_TurnOn();
 
@@ -243,20 +243,11 @@ void Main(void)
         }
         else
         {
-            // If NONE is selected, we JUST turn on the light and skip the welcome screen entirely
+            // If NONE or SOUND is selected, we skip the logo and wait time entirely
+            // This stops the "snow storm" static on boot
             BACKLIGHT_TurnOn();
         }
-            while (boot_counter_10ms > 0)
-            {
-                if (KEYBOARD_Poll() != KEY_INVALID)
-                {   // halt boot beeps
-                    boot_counter_10ms = 0;
-                    break;
-                }
-            }
-            RADIO_SetupRegisters(true);
-        }
-
+    }
 #ifdef ENABLE_PWRON_PASSWORD
         if (gEeprom.POWER_ON_PASSWORD < 1000000)
         {
