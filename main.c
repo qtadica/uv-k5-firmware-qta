@@ -221,16 +221,31 @@ void Main(void)
     }
     else
     {
-        UI_DisplayWelcome();
-
-        BACKLIGHT_TurnOn();
-
-#ifdef ENABLE_FEAT_F4HWN
+       #ifdef ENABLE_FEAT_F4HWN
         if (gEeprom.POWER_ON_DISPLAY_MODE != POWER_ON_DISPLAY_MODE_NONE && gEeprom.POWER_ON_DISPLAY_MODE != POWER_ON_DISPLAY_MODE_SOUND)
 #else
         if (gEeprom.POWER_ON_DISPLAY_MODE != POWER_ON_DISPLAY_MODE_NONE)
 #endif
-        {   // 2.55 second boot-up screen
+        {   
+            // We moved these inside the IF so they ONLY run if you didn't select NONE
+            UI_DisplayWelcome();
+            BACKLIGHT_TurnOn();
+
+            while (boot_counter_10ms > 0)
+            {
+                if (KEYBOARD_Poll() != KEY_INVALID)
+                {   
+                    boot_counter_10ms = 0;
+                    break;
+                }
+            }
+            RADIO_SetupRegisters(true);
+        }
+        else
+        {
+            // If NONE is selected, we JUST turn on the light and skip the welcome screen entirely
+            BACKLIGHT_TurnOn();
+        }
             while (boot_counter_10ms > 0)
             {
                 if (KEYBOARD_Poll() != KEY_INVALID)
