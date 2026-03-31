@@ -224,7 +224,9 @@ void Main(void)
         }
         else
         {
-            BACKLIGHT_TurnOn();
+            UI_DisplayClear();      // Wipe the "snow" (static) from memory
+            ST7565_BlitFullScreen(); // Push that "blackness" to the hardware
+            BACKLIGHT_TurnOn();      // Now turn the light on to a clean screen;
         }
 
 #ifdef ENABLE_PWRON_PASSWORD
