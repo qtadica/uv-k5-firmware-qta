@@ -172,11 +172,11 @@ void Main(void)
         UI_DisplayClear();      
         memset(gStatusLine, 0, sizeof(gStatusLine));
 
-        // 2. Hand-write the two lines of text manually
-        UI_PrintString("RELEASE", 0, 127, 1, 8, true);
-        UI_PrintString("ALL BUTTONS", 0, 127, 3, 8, true);
+        // 2. Write text with exactly 5 arguments (String, Start, End, Line, Width)
+        UI_PrintString("RELEASE", 0, 127, 1, 8);
+        UI_PrintString("ALL BUTTONS", 0, 127, 3, 8);
 
-        // 3. Push it all to the glass at once
+        // 3. Push to glass
         ST7565_BlitFullScreen(); 
         ST7565_BlitStatusLine();
 
