@@ -25,6 +25,7 @@
 #include "bitmaps.h"
 #include "settings.h"
 
+// Static buffer to prevent stack/memory crashes
 static char s_Buf[32];
 
 void UI_DisplayReleaseKeys(void)
@@ -36,47 +37,60 @@ void UI_DisplayReleaseKeys(void)
 
 void UI_DisplayWelcome(void)
 {
-    // 1. Check Menu Setting - If set to NONE (0), exit immediately
-    if (gEeprom.PWR_ON_DISPLAY_MODE == PWR_ON_DISPLAY_MODE_OFF) {
+    // 1. Check Menu Setting using the names the compiler wants
+    if (gEeprom.POWER_ON_DISPLAY_MODE == POWER_ON_DISPLAY_MODE_NONE) {
         return;
     }
 
     UI_DisplayClear();
     memset(gStatusLine, 0, sizeof(gStatusLine));
 
-    // 2. Draw Logo ONLY if set to ALL (1)
-    if (gEeprom.PWR_ON_DISPLAY_MODE == PWR_ON_DISPLAY_MODE_FULL) {
+    // 2. DRAW LOGO (Only if set to ALL)
+    if (gEeprom.POWER_ON_DISPLAY_MODE == POWER_ON_DISPLAY_MODE_ALL) {
         memcpy(gStatusLine, g_qta_logo_short, 128);
         memcpy(gFrameBuffer, g_qta_logo_short + 128, 256);
     }
 
-    // 3. Process Text ONLY if set to ALL (1) or MESSAGE (2)
-    if (gEeprom.PWR_ON_DISPLAY_MODE == PWR_ON_DISPLAY_MODE_FULL || gEeprom.PWR_ON_DISPLAY_MODE == PWR_ON_DISPLAY_MODE_MESSAGE) {
+    // 3. DRAW MESSAGES (If set to ALL or MESSAGE)
+    if (gEeprom.POWER_ON_DISPLAY_MODE == POWER_ON_DISPLAY_MODE_ALL || 
+        gEeprom.POWER_ON_DISPLAY_MODE == POWER_ON_DISPLAY_MODE_MESSAGE) {
+        
         // Line 4 (CHIRP 1)
         memset(s_Buf, 0, sizeof(s_Buf));
         EEPROM_ReadBuffer(0x0EB0, s_Buf, 16);
         for (int i = 0; i < 16; i++) { if (s_Buf[i] < 32 || s_Buf[i] > 126) { s_Buf[i] = '\0'; break; } }
         
-        if (strlen(s_Buf) > 0) UI_PrintStringSmallNormal(s_Buf, 0, 127, 4);
-        else UI_PrintStringSmallNormal("QTA MOD", 0, 127, 4);
+        if (strlen(s_Buf) > 0) {
+            UI_PrintStringSmallNormal(s_Buf, 0, 127, 4);
+        } else {
+            UI_PrintStringSmallNormal("QTA MOD", 0, 127, 4);
+        }
 
         // Line 5 (CHIRP 2)
         memset(s_Buf, 0, sizeof(s_Buf));
         EEPROM_ReadBuffer(0x0EC0, s_Buf, 16);
         for (int i = 0; i < 16; i++) { if (s_Buf[i] < 32 || s_Buf[i] > 126) { s_Buf[i] = '\0'; break; } }
         
-        if (strlen(s_Buf) > 0) UI_PrintStringSmallNormal(s_Buf, 0, 127, 5);
-        else UI_PrintStringSmallNormal("Welcome", 0, 127, 5);
+        if (strlen(s_Buf) > 0) {
+            UI_PrintStringSmallNormal(s_Buf, 0, 127, 5);
+        } else {
+            UI_PrintStringSmallNormal("V1.0 ONLINE", 0, 127, 5);
+        }
     }
 
-    // 4. Draw Battery ONLY if set to ALL (1) or VOLTAGE (3)
-    if (gEeprom.PWR_ON_DISPLAY_MODE == PWR_ON_DISPLAY_MODE_FULL || gEeprom.PWR_ON_DISPLAY_MODE == PWR_ON_DISPLAY_MODE_VOLTAGE) {
+    // 4. DRAW VOLTAGE (If set to ALL or VOLTAGE)
+    if (gEeprom.POWER_ON_DISPLAY_MODE == POWER_ON_DISPLAY_MODE_ALL || 
+        gEeprom.POWER_ON_DISPLAY_MODE == POWER_ON_DISPLAY_MODE_VOLTAGE) {
+        
         memset(s_Buf, 0, sizeof(s_Buf));
-        sprintf(s_Buf, "%s  %u.%02uV", Version, gBatteryVoltageAverage / 100, gBatteryVoltageAverage % 100);
+        sprintf(s_Buf, "%s  %u.%02uV", 
+                Version, 
+                gBatteryVoltageAverage / 100, 
+                gBatteryVoltageAverage % 100);
         UI_PrintStringSmallNormal(s_Buf, 0, 127, 6);
     }
 
-    // 5. Final Push
+    // 5. THE PUSH
     ST7565_BlitStatusLine();
     ST7565_BlitFullScreen();
 }
