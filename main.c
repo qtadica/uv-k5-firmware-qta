@@ -29,7 +29,7 @@
 #include "settings.h"
 #include "version.h"
 
-// --- ADDED INCLUDES FOR SCREEN CLEARING ---
+// TOOLS FOR SCREEN CLEARING
 #include "driver/st7565.h" 
 #include "ui/helper.h"
 
@@ -90,7 +90,7 @@ void Main(void)
     SYSTICK_Init();
     BOARD_Init();
 
-    boot_counter_10ms = 250;   // Keep at 250 until app.h is changed to uint16
+    boot_counter_10ms = 250; 
 
 #ifdef ENABLE_UART
     UART_Init();
@@ -101,9 +101,7 @@ void Main(void)
     gDTMF_String[sizeof(gDTMF_String) - 1] = 0;
 
     BK4819_Init();
-
     BOARD_ADC_GetBatteryInfo(&gBatteryCurrentVoltage, &gBatteryCurrent);
-
     SETTINGS_InitEEPROM();
 
     #ifdef ENABLE_FEAT_F4HWN
@@ -118,7 +116,6 @@ void Main(void)
     RADIO_ConfigureChannel(1, VFO_CONFIGURE_RELOAD);
 
     RADIO_SelectVfos();
-
     RADIO_SetupRegisters(true);
 
     for (unsigned int i = 0; i < ARRAY_SIZE(gBatteryVoltages); i++)
@@ -130,7 +127,7 @@ void Main(void)
     AM_fix_init();
 #endif
 
-    BOOT_Mode_t  BootMode = BOOT_GetMode();
+    BOOT_Mode_t BootMode = BOOT_GetMode();
 
 #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
     if (BootMode == BOOT_MODE_RESCUE_OPS)
@@ -140,16 +137,9 @@ void Main(void)
     }
 #endif
 
-#ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
-    if (BootMode == BOOT_MODE_F_LOCK && gEeprom.MENU_LOCK == true)
-    {
-        BootMode = BOOT_MODE_NORMAL;
-    }
-#endif
-
     if (BootMode == BOOT_MODE_F_LOCK)
     {
-        gF_LOCK = true;            // flag to say include the hidden menu items
+        gF_LOCK = true; 
         #ifdef ENABLE_FEAT_F4HWN
             gEeprom.KEY_LOCK = 0;
             SETTINGS_SaveSettings();
@@ -158,7 +148,6 @@ void Main(void)
             #else
                 gMenuCursor = 68; 
             #endif
-
             #ifdef ENABLE_NOAA
                 gMenuCursor += 1; 
             #endif
@@ -173,14 +162,20 @@ void Main(void)
     while (MenuList[gMenuListCount].name[0] != '\0') {
         if(!gF_LOCK && MenuList[gMenuListCount].menu_id == FIRST_HIDDEN_MENU_ITEM)
             break;
-
         gMenuListCount++;
     }
 
+    // --- FIX FOR SECRET MENU / KEY RELEASE STATIC ---
     if (!GPIO_CheckBit(&GPIOC->DATA, GPIOC_PIN_PTT) ||
          KEYBOARD_Poll() != KEY_INVALID ||
          BootMode != BOOT_MODE_NORMAL)
     {
+        // Wipe screen and top row BEFORE showing "RELEASE KEYS"
+        UI_DisplayClear();      
+        ST7565_BlitFullScreen(); 
+        memset(gStatusLine, 0, sizeof(gStatusLine));
+        ST7565_BlitStatusLine();
+
         UI_DisplayReleaseKeys();
         BACKLIGHT_TurnOn();
 
@@ -197,12 +192,10 @@ void Main(void)
     if (!gChargingWithTypeC && gBatteryDisplayLevel == 0)
     {
         FUNCTION_Select(FUNCTION_POWER_SAVE);
-
         if (gEeprom.BACKLIGHT_TIME < 61) 
             BACKLIGHT_TurnOff();    
         else
             BACKLIGHT_TurnOn();     
-
         gReducedService = true;
     }
     else
@@ -213,10 +206,8 @@ void Main(void)
         if (gEeprom.POWER_ON_DISPLAY_MODE != POWER_ON_DISPLAY_MODE_NONE)
         #endif
         {   
-            // Standard Welcome Screen Boot
             UI_DisplayWelcome();
             BACKLIGHT_TurnOn();
-
             while (boot_counter_10ms > 0)
             {
                 if (KEYBOARD_Poll() != KEY_INVALID)
@@ -229,16 +220,10 @@ void Main(void)
         }
         else
         {
-            // --- CLEAN BOOT FOR "NONE" MODE ---
-            // 1. Wipe Main Frame Buffer
             UI_DisplayClear();      
             ST7565_BlitFullScreen(); 
-
-            // 2. Wipe Status Line (Top Row)
             memset(gStatusLine, 0, sizeof(gStatusLine));
             ST7565_BlitStatusLine();
-
-            // 3. Now safe to turn on light
             BACKLIGHT_TurnOn();
         }
 
@@ -248,7 +233,6 @@ void Main(void)
             bIsInLockScreen = true;
             UI_DisplayLock();
             bIsInLockScreen = false;
-
             for (int i = 0; i < 50;)
             {
                 i = (GPIO_CheckBit(&GPIOC->DATA, GPIOC_PIN_PTT) && KEYBOARD_Poll() == KEY_INVALID) ? i + 1 : 0;
@@ -267,9 +251,7 @@ void Main(void)
 #ifdef ENABLE_VOICE
         {
             uint8_t Channel;
-
             AUDIO_SetVoiceID(0, VOICE_ID_WELCOME);
-
             Channel = gEeprom.ScreenChannel[gEeprom.TX_VFO];
             if (IS_MR_CHANNEL(Channel))
             {
@@ -278,7 +260,6 @@ void Main(void)
             }
             else if (IS_FREQ_CHANNEL(Channel))
                 AUDIO_SetVoiceID(1, VOICE_ID_FREQUENCY_MODE);
-
             AUDIO_PlaySingleVoice(0);
         }
 #endif
@@ -295,11 +276,9 @@ void Main(void)
                 SWAP(gScanRangeStart, gScanRangeStop);
             }
         }
-
         if (gEeprom.CURRENT_STATE == 1) {
             gEeprom.SCAN_LIST_DEFAULT = gEeprom.CURRENT_LIST;
         }
-
         if (gEeprom.CURRENT_STATE == 1 || gEeprom.CURRENT_STATE == 2) {
             CHFRSCANNER_Start(true, SCAN_FWD);
         }
@@ -319,11 +298,8 @@ void Main(void)
 
     while (true) {
         APP_Update();
-
         if (gNextTimeslice) {
-
             APP_TimeSlice10ms();
-
             if (gNextTimeslice_500ms) {
                 APP_TimeSlice500ms();
             }
