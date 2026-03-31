@@ -24,7 +24,7 @@
 #include "version.h"
 #include "bitmaps.h"
 
-// Define our own safe buffer here so we don't get "undeclared" errors
+// Static buffer to keep the memory off the "Stack" and prevent crashes
 static char s_WelcomeBuffer[32];
 
 void UI_DisplayReleaseKeys(void)
@@ -39,15 +39,14 @@ void UI_DisplayWelcome(void)
     UI_DisplayClear();
     memset(gStatusLine, 0, sizeof(gStatusLine));
 
-    // 1. DRAW LOGO (Using the flat pointer logic that we know works)
+    // 1. DRAW LOGO (Lines 0, 1, 2)
     memcpy(gStatusLine, g_qta_logo_short, 128);
     memcpy(gFrameBuffer, g_qta_logo_short + 128, 256);
 
-    // 2. CHIRP LINE 1
+    // 2. CHIRP LINE 1 (Line 4)
     memset(s_WelcomeBuffer, 0, sizeof(s_WelcomeBuffer));
     EEPROM_ReadBuffer(0x0EB0, s_WelcomeBuffer, 16);
     
-    // Sanitize: Stop at the first weird character to prevent font-crash
     for (int i = 0; i < 16; i++) {
         if (s_WelcomeBuffer[i] < 32 || s_WelcomeBuffer[i] > 126) {
             s_WelcomeBuffer[i] = '\0';
@@ -61,7 +60,7 @@ void UI_DisplayWelcome(void)
         UI_PrintStringSmallNormal("QTA MOD", 0, 127, 4);
     }
 
-    // 3. CHIRP LINE 2
+    // 3. CHIRP LINE 2 (Line 5)
     memset(s_WelcomeBuffer, 0, sizeof(s_WelcomeBuffer));
     EEPROM_ReadBuffer(0x0EC0, s_WelcomeBuffer, 16);
     
@@ -74,17 +73,21 @@ void UI_DisplayWelcome(void)
 
     if (strlen(s_WelcomeBuffer) > 0) {
         UI_PrintStringSmallNormal(s_WelcomeBuffer, 0, 127, 5);
+    } else {
+        UI_PrintStringSmallNormal("Welcome", 0, 127, 5);
     }
 
-    // 4. VERSION & BATTERY 
+    // 4. VERSION, VOLTAGE & PERCENTAGE (Line 6)
     memset(s_WelcomeBuffer, 0, sizeof(s_WelcomeBuffer));
-    sprintf(s_WelcomeBuffer, "%s  %u.%02uV", 
+    sprintf(s_WelcomeBuffer, "%s %u.%02uV %u%%", 
             Version, 
             gBatteryVoltageAverage / 100, 
-            gBatteryVoltageAverage % 100);
+            gBatteryVoltageAverage % 100,
+            BATTERY_VoltsToPercent(gBatteryVoltageAverage)); // Calculate %
+            
     UI_PrintStringSmallNormal(s_WelcomeBuffer, 0, 127, 6);
 
-    // 5. PUSH TO SCREEN
+    // 5. PUSH TO HARDWARE
     ST7565_BlitStatusLine();
     ST7565_BlitFullScreen();
 }
