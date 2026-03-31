@@ -16,7 +16,7 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <stdio.h>     // NULL
+#include <stdio.h>
 
 #ifdef ENABLE_AM_FIX
     #include "am_fix.h"
@@ -29,7 +29,7 @@
 #include "settings.h"
 #include "version.h"
 
-// TOOLS FOR SCREEN CLEARING
+// TOOLS FOR SCREEN CLEARING AND TEXT
 #include "driver/st7565.h" 
 #include "ui/helper.h"
 
@@ -75,7 +75,6 @@ void _putchar(__attribute__((unused)) char c)
 
 void Main(void)
 {
-    // Enable clock gating of blocks we need
     SYSCON_DEV_CLK_GATE = 0
         | SYSCON_DEV_CLK_GATE_GPIOA_BITS_ENABLE
         | SYSCON_DEV_CLK_GATE_GPIOB_BITS_ENABLE
@@ -114,7 +113,6 @@ void Main(void)
 
     RADIO_ConfigureChannel(0, VFO_CONFIGURE_RELOAD);
     RADIO_ConfigureChannel(1, VFO_CONFIGURE_RELOAD);
-
     RADIO_SelectVfos();
     RADIO_SetupRegisters(true);
 
@@ -165,19 +163,20 @@ void Main(void)
         gMenuListCount++;
     }
 
-    // --- UPDATED FIX FOR SECRET MENU TEXT ---
+    // --- MANUAL TEXT DRAWING FOR SECRET MENU ---
     if (!GPIO_CheckBit(&GPIOC->DATA, GPIOC_PIN_PTT) ||
          KEYBOARD_Poll() != KEY_INVALID ||
          BootMode != BOOT_MODE_NORMAL)
     {
-        // 1. Wipe everything first
+        // 1. Wipe everything
         UI_DisplayClear();      
         memset(gStatusLine, 0, sizeof(gStatusLine));
 
-        // 2. Draw the text to the buffer
-        UI_DisplayReleaseKeys();
+        // 2. Hand-write the two lines of text manually
+        UI_PrintString("RELEASE", 0, 127, 1, 8, true);
+        UI_PrintString("ALL BUTTONS", 0, 127, 3, 8, true);
 
-        // 3. Push EVERYTHING to the physical screen at once
+        // 3. Push it all to the glass at once
         ST7565_BlitFullScreen(); 
         ST7565_BlitStatusLine();
 
