@@ -5,13 +5,13 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     Unless required by applicable law or agreed to in writing, software
- *     distributed under the License is distributed on an "AS IS" BASIS,
- *     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *     See the License for the specific language governing permissions and
- *     limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include <stdint.h>
@@ -61,13 +61,12 @@
 #include "ui/lock.h"
 #include "ui/welcome.h"
 #include "ui/menu.h"
+
 void _putchar(__attribute__((unused)) char c)
 {
-
 #ifdef ENABLE_UART
     UART_Send((uint8_t *)&c, 1);
 #endif
-
 }
 
 void Main(void)
@@ -84,18 +83,15 @@ void Main(void)
         | SYSCON_DEV_CLK_GATE_AES_BITS_ENABLE
         | SYSCON_DEV_CLK_GATE_PWM_PLUS0_BITS_ENABLE;
 
-
     SYSTICK_Init();
     BOARD_Init();
 
-    boot_counter_10ms = 250;   // 2.5 sec
+    boot_counter_10ms = 400;   // Updated: 4.0 seconds
 
 #ifdef ENABLE_UART
     UART_Init();
     UART_Send(UART_Version, strlen(UART_Version));
 #endif
-
-    // Not implementing authentic device checks
 
     memset(gDTMF_String, '-', sizeof(gDTMF_String));
     gDTMF_String[sizeof(gDTMF_String) - 1] = 0;
@@ -138,16 +134,6 @@ void Main(void)
         gEeprom.MENU_LOCK = !gEeprom.MENU_LOCK;
         SETTINGS_SaveSettings();
     }
-
-    /*
-    if(gEeprom.MENU_LOCK == true) // Force Main Only
-    {
-        gEeprom.DUAL_WATCH = 0;
-        gEeprom.CROSS_BAND_RX_TX = 0;
-        //gFlagReconfigureVfos = true;
-        //gUpdateStatus        = true;
-    }
-    */
 #endif
 
 #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
@@ -159,28 +145,26 @@ void Main(void)
 
     if (BootMode == BOOT_MODE_F_LOCK)
     {
-
         gF_LOCK = true;            // flag to say include the hidden menu items
         #ifdef ENABLE_FEAT_F4HWN
             gEeprom.KEY_LOCK = 0;
             SETTINGS_SaveSettings();
             #ifndef ENABLE_VOX
-                gMenuCursor = 67; // move to hidden section, fix me if change... !!! Remove VOX and Mic Bar
+                gMenuCursor = 67; 
             #else
-                gMenuCursor = 68; // move to hidden section, fix me if change... !!!
+                gMenuCursor = 68; 
             #endif
 
             #ifdef ENABLE_NOAA
-                gMenuCursor += 1; // move to hidden section, fix me if change... !!!
+                gMenuCursor += 1; 
             #endif
             #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
-                gMenuCursor += 1; // move to hidden section, fix me if change... !!!
+                gMenuCursor += 1; 
             #endif
             gSubMenuSelection = gSetting_F_LOCK;
         #endif
     }
 
-    // count the number of menu items
     gMenuListCount = 0;
     while (MenuList[gMenuListCount].name[0] != '\0') {
         if(!gF_LOCK && MenuList[gMenuListCount].menu_id == FIRST_HIDDEN_MENU_ITEM)
@@ -189,15 +173,13 @@ void Main(void)
         gMenuListCount++;
     }
 
-    // wait for user to release all butts before moving on
     if (!GPIO_CheckBit(&GPIOC->DATA, GPIOC_PIN_PTT) ||
          KEYBOARD_Poll() != KEY_INVALID ||
          BootMode != BOOT_MODE_NORMAL)
-    {   // keys are pressed
+    {
         UI_DisplayReleaseKeys();
         BACKLIGHT_TurnOn();
 
-        // 500ms
         for (int i = 0; i < 50;)
         {
             i = (GPIO_CheckBit(&GPIOC->DATA, GPIOC_PIN_PTT) && KEYBOARD_Poll() == KEY_INVALID) ? i + 1 : 0;
@@ -208,14 +190,14 @@ void Main(void)
         gDebounceCounter = 0;
     }
 
-   if (!gChargingWithTypeC && gBatteryDisplayLevel == 0)
+    if (!gChargingWithTypeC && gBatteryDisplayLevel == 0)
     {
         FUNCTION_Select(FUNCTION_POWER_SAVE);
 
-        if (gEeprom.BACKLIGHT_TIME < 61) // backlight is not set to be always on
-            BACKLIGHT_TurnOff();    // turn the backlight OFF
+        if (gEeprom.BACKLIGHT_TIME < 61) 
+            BACKLIGHT_TurnOff();    
         else
-            BACKLIGHT_TurnOn();     // turn the backlight ON
+            BACKLIGHT_TurnOn();     
 
         gReducedService = true;
     }
@@ -227,7 +209,6 @@ void Main(void)
         if (gEeprom.POWER_ON_DISPLAY_MODE != POWER_ON_DISPLAY_MODE_NONE)
 #endif
         {   
-            // Draw the screen and wait ONLY if NOT set to NONE or SOUND
             UI_DisplayWelcome();
             BACKLIGHT_TurnOn();
 
@@ -243,11 +224,9 @@ void Main(void)
         }
         else
         {
-            // If NONE or SOUND is selected, we skip the logo and wait time entirely
-            // This stops the "snow storm" static on boot
             BACKLIGHT_TurnOn();
         }
-    }
+
 #ifdef ENABLE_PWRON_PASSWORD
         if (gEeprom.POWER_ON_PASSWORD < 1000000)
         {
@@ -255,7 +234,6 @@ void Main(void)
             UI_DisplayLock();
             bIsInLockScreen = false;
 
-            // 500ms
             for (int i = 0; i < 50;)
             {
                 i = (GPIO_CheckBit(&GPIOC->DATA, GPIOC_PIN_PTT) && KEYBOARD_Poll() == KEY_INVALID) ? i + 1 : 0;
@@ -268,9 +246,7 @@ void Main(void)
 #endif
 
         BOOT_ProcessMode(BootMode);
-
         GPIO_ClearBit(&GPIOA->DATA, GPIOA_PIN_VOICE_0);
-
         gUpdateStatus = true;
 
 #ifdef ENABLE_VOICE
@@ -295,53 +271,8 @@ void Main(void)
 #ifdef ENABLE_NOAA
         RADIO_ConfigureNOAA();
 #endif
-    }
 
-    /*
-    #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
-    if(gEeprom.CURRENT_STATE == 2 || gEeprom.CURRENT_STATE == 5)
-    {
-            gScanRangeStart = gScanRangeStart ? 0 : gTxVfo->pRX->Frequency;
-            gScanRangeStop = gEeprom.VfoInfo[!gEeprom.TX_VFO].freq_config_RX.Frequency;
-            if(gScanRangeStart > gScanRangeStop)
-            {
-                SWAP(gScanRangeStart, gScanRangeStop);
-            }
-    }
-    switch (gEeprom.CURRENT_STATE) {
-        case 1:
-            gEeprom.SCAN_LIST_DEFAULT = gEeprom.CURRENT_LIST;
-            CHFRSCANNER_Start(true, SCAN_FWD);
-            break;
-
-        case 2:
-            CHFRSCANNER_Start(true, SCAN_FWD);
-            break;
-
-        #ifdef ENABLE_FMRADIO
-        case 3:
-            ACTION_FM();
-            GUI_SelectNextDisplay(gRequestDisplayScreen);
-            break;
-        #endif
-
-        #ifdef ENABLE_SPECTRUM
-        case 4:
-            APP_RunSpectrum();
-            break;
-        case 5:
-            APP_RunSpectrum();
-            break;
-        #endif
-
-        default:
-            // No action for CURRENT_STATE == 0 or other unexpected values
-            break;
-    }
-    #endif
-    */
-
-    #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
+#ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
         if (gEeprom.CURRENT_STATE == 2 || gEeprom.CURRENT_STATE == 5) {
             gScanRangeStart = gScanRangeStart ? 0 : gTxVfo->pRX->Frequency;
             gScanRangeStop = gEeprom.VfoInfo[!gEeprom.TX_VFO].freq_config_RX.Frequency;
@@ -368,8 +299,9 @@ void Main(void)
             APP_RunSpectrum();
         }
         #endif
-    #endif
-        
+#endif
+    } 
+
     while (true) {
         APP_Update();
 
