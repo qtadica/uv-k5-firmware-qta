@@ -13,7 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+#include "driver/st7565.h"
+#include "ui/helper.h"
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>     // NULL
