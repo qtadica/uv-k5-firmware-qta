@@ -16,7 +16,7 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <stdio.h>
+#include <stdio.h>     // NULL
 
 #ifdef ENABLE_AM_FIX
     #include "am_fix.h"
@@ -29,7 +29,7 @@
 #include "settings.h"
 #include "version.h"
 
-// TOOLS NEEDED FOR THE CLEAN BOOT (The "Includes")
+// --- ADDED INCLUDES FOR SCREEN CLEARING ---
 #include "driver/st7565.h" 
 #include "ui/helper.h"
 
@@ -75,6 +75,7 @@ void _putchar(__attribute__((unused)) char c)
 
 void Main(void)
 {
+    // Enable clock gating of blocks we need
     SYSCON_DEV_CLK_GATE = 0
         | SYSCON_DEV_CLK_GATE_GPIOA_BITS_ENABLE
         | SYSCON_DEV_CLK_GATE_GPIOB_BITS_ENABLE
@@ -89,8 +90,7 @@ void Main(void)
     SYSTICK_Init();
     BOARD_Init();
 
-    // Staying at 250 for now so the compiler doesn't complain
-    boot_counter_10ms = 250; 
+    boot_counter_10ms = 250;   // Keep at 250 until app.h is changed to uint16
 
 #ifdef ENABLE_UART
     UART_Init();
@@ -101,7 +101,9 @@ void Main(void)
     gDTMF_String[sizeof(gDTMF_String) - 1] = 0;
 
     BK4819_Init();
+
     BOARD_ADC_GetBatteryInfo(&gBatteryCurrentVoltage, &gBatteryCurrent);
+
     SETTINGS_InitEEPROM();
 
     #ifdef ENABLE_FEAT_F4HWN
@@ -114,7 +116,9 @@ void Main(void)
 
     RADIO_ConfigureChannel(0, VFO_CONFIGURE_RELOAD);
     RADIO_ConfigureChannel(1, VFO_CONFIGURE_RELOAD);
+
     RADIO_SelectVfos();
+
     RADIO_SetupRegisters(true);
 
     for (unsigned int i = 0; i < ARRAY_SIZE(gBatteryVoltages); i++)
@@ -126,7 +130,7 @@ void Main(void)
     AM_fix_init();
 #endif
 
-    BOOT_Mode_t BootMode = BOOT_GetMode();
+    BOOT_Mode_t  BootMode = BOOT_GetMode();
 
 #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
     if (BootMode == BOOT_MODE_RESCUE_OPS)
@@ -136,22 +140,30 @@ void Main(void)
     }
 #endif
 
+#ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
+    if (BootMode == BOOT_MODE_F_LOCK && gEeprom.MENU_LOCK == true)
+    {
+        BootMode = BOOT_MODE_NORMAL;
+    }
+#endif
+
     if (BootMode == BOOT_MODE_F_LOCK)
     {
-        gF_LOCK = true;
+        gF_LOCK = true;            // flag to say include the hidden menu items
         #ifdef ENABLE_FEAT_F4HWN
             gEeprom.KEY_LOCK = 0;
             SETTINGS_SaveSettings();
             #ifndef ENABLE_VOX
-                gMenuCursor = 67;
+                gMenuCursor = 67; 
             #else
-                gMenuCursor = 68;
+                gMenuCursor = 68; 
             #endif
+
             #ifdef ENABLE_NOAA
-                gMenuCursor += 1;
+                gMenuCursor += 1; 
             #endif
             #ifdef ENABLE_FEAT_F4HWN_RESCUE_OPS
-                gMenuCursor += 1;
+                gMenuCursor += 1; 
             #endif
             gSubMenuSelection = gSetting_F_LOCK;
         #endif
@@ -161,6 +173,7 @@ void Main(void)
     while (MenuList[gMenuListCount].name[0] != '\0') {
         if(!gF_LOCK && MenuList[gMenuListCount].menu_id == FIRST_HIDDEN_MENU_ITEM)
             break;
+
         gMenuListCount++;
     }
 
@@ -170,6 +183,7 @@ void Main(void)
     {
         UI_DisplayReleaseKeys();
         BACKLIGHT_TurnOn();
+
         for (int i = 0; i < 50;)
         {
             i = (GPIO_CheckBit(&GPIOC->DATA, GPIOC_PIN_PTT) && KEYBOARD_Poll() == KEY_INVALID) ? i + 1 : 0;
@@ -183,23 +197,26 @@ void Main(void)
     if (!gChargingWithTypeC && gBatteryDisplayLevel == 0)
     {
         FUNCTION_Select(FUNCTION_POWER_SAVE);
-        if (gEeprom.BACKLIGHT_TIME < 61)
-            BACKLIGHT_TurnOff();
+
+        if (gEeprom.BACKLIGHT_TIME < 61) 
+            BACKLIGHT_TurnOff();    
         else
-            BACKLIGHT_TurnOn();
+            BACKLIGHT_TurnOn();     
+
         gReducedService = true;
     }
     else
     {
-        // --- CLEAN BOOT START ---
         #ifdef ENABLE_FEAT_F4HWN
         if (gEeprom.POWER_ON_DISPLAY_MODE != POWER_ON_DISPLAY_MODE_NONE && gEeprom.POWER_ON_DISPLAY_MODE != POWER_ON_DISPLAY_MODE_SOUND)
         #else
         if (gEeprom.POWER_ON_DISPLAY_MODE != POWER_ON_DISPLAY_MODE_NONE)
         #endif
         {   
+            // Standard Welcome Screen Boot
             UI_DisplayWelcome();
             BACKLIGHT_TurnOn();
+
             while (boot_counter_10ms > 0)
             {
                 if (KEYBOARD_Poll() != KEY_INVALID)
@@ -212,21 +229,26 @@ void Main(void)
         }
         else
         {
-            // Wipe the screen memory clean so we don't see "snow"
+            // --- CLEAN BOOT FOR "NONE" MODE ---
+            // 1. Wipe Main Frame Buffer
             UI_DisplayClear();      
             ST7565_BlitFullScreen(); 
 
-            // Now turn the light on to a perfectly black screen
+            // 2. Wipe Status Line (Top Row)
+            memset(gStatusLine, 0, sizeof(gStatusLine));
+            ST7565_BlitStatusLine();
+
+            // 3. Now safe to turn on light
             BACKLIGHT_TurnOn();
         }
-        // --- CLEAN BOOT END ---
 
-        #ifdef ENABLE_PWRON_PASSWORD
+#ifdef ENABLE_PWRON_PASSWORD
         if (gEeprom.POWER_ON_PASSWORD < 1000000)
         {
             bIsInLockScreen = true;
             UI_DisplayLock();
             bIsInLockScreen = false;
+
             for (int i = 0; i < 50;)
             {
                 i = (GPIO_CheckBit(&GPIOC->DATA, GPIOC_PIN_PTT) && KEYBOARD_Poll() == KEY_INVALID) ? i + 1 : 0;
@@ -236,16 +258,18 @@ void Main(void)
             gKeyReading1 = KEY_INVALID;
             gDebounceCounter = 0;
         }
-        #endif
+#endif
 
         BOOT_ProcessMode(BootMode);
         GPIO_ClearBit(&GPIOA->DATA, GPIOA_PIN_VOICE_0);
         gUpdateStatus = true;
 
-        #ifdef ENABLE_VOICE
+#ifdef ENABLE_VOICE
         {
             uint8_t Channel;
+
             AUDIO_SetVoiceID(0, VOICE_ID_WELCOME);
+
             Channel = gEeprom.ScreenChannel[gEeprom.TX_VFO];
             if (IS_MR_CHANNEL(Channel))
             {
@@ -254,46 +278,52 @@ void Main(void)
             }
             else if (IS_FREQ_CHANNEL(Channel))
                 AUDIO_SetVoiceID(1, VOICE_ID_FREQUENCY_MODE);
+
             AUDIO_PlaySingleVoice(0);
         }
-        #endif
+#endif
 
-        #ifdef ENABLE_NOAA
-            RADIO_ConfigureNOAA();
-        #endif
+#ifdef ENABLE_NOAA
+        RADIO_ConfigureNOAA();
+#endif
 
-        #ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
-            if (gEeprom.CURRENT_STATE == 2 || gEeprom.CURRENT_STATE == 5) {
-                gScanRangeStart = gScanRangeStart ? 0 : gTxVfo->pRX->Frequency;
-                gScanRangeStop = gEeprom.VfoInfo[!gEeprom.TX_VFO].freq_config_RX.Frequency;
-                if (gScanRangeStart > gScanRangeStop) {
-                    SWAP(gScanRangeStart, gScanRangeStop);
-                }
+#ifdef ENABLE_FEAT_F4HWN_RESUME_STATE
+        if (gEeprom.CURRENT_STATE == 2 || gEeprom.CURRENT_STATE == 5) {
+            gScanRangeStart = gScanRangeStart ? 0 : gTxVfo->pRX->Frequency;
+            gScanRangeStop = gEeprom.VfoInfo[!gEeprom.TX_VFO].freq_config_RX.Frequency;
+            if (gScanRangeStart > gScanRangeStop) {
+                SWAP(gScanRangeStart, gScanRangeStop);
             }
-            if (gEeprom.CURRENT_STATE == 1) {
-                gEeprom.SCAN_LIST_DEFAULT = gEeprom.CURRENT_LIST;
-            }
-            if (gEeprom.CURRENT_STATE == 1 || gEeprom.CURRENT_STATE == 2) {
-                CHFRSCANNER_Start(true, SCAN_FWD);
-            }
-            #ifdef ENABLE_FMRADIO
-            else if (gEeprom.CURRENT_STATE == 3) {
-                ACTION_FM();
-                GUI_SelectNextDisplay(gRequestDisplayScreen);
-            }
-            #endif
-            #ifdef ENABLE_SPECTRUM
-            else if (gEeprom.CURRENT_STATE == 4 || gEeprom.CURRENT_STATE == 5) {
-                APP_RunSpectrum();
-            }
-            #endif
+        }
+
+        if (gEeprom.CURRENT_STATE == 1) {
+            gEeprom.SCAN_LIST_DEFAULT = gEeprom.CURRENT_LIST;
+        }
+
+        if (gEeprom.CURRENT_STATE == 1 || gEeprom.CURRENT_STATE == 2) {
+            CHFRSCANNER_Start(true, SCAN_FWD);
+        }
+        #ifdef ENABLE_FMRADIO
+        else if (gEeprom.CURRENT_STATE == 3) {
+            ACTION_FM();
+            GUI_SelectNextDisplay(gRequestDisplayScreen);
+        }
         #endif
+        #ifdef ENABLE_SPECTRUM
+        else if (gEeprom.CURRENT_STATE == 4 || gEeprom.CURRENT_STATE == 5) {
+            APP_RunSpectrum();
+        }
+        #endif
+#endif
     } 
 
     while (true) {
         APP_Update();
+
         if (gNextTimeslice) {
+
             APP_TimeSlice10ms();
+
             if (gNextTimeslice_500ms) {
                 APP_TimeSlice500ms();
             }
