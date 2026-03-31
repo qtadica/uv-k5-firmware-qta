@@ -165,18 +165,22 @@ void Main(void)
         gMenuListCount++;
     }
 
-    // --- FIX FOR SECRET MENU / KEY RELEASE STATIC ---
+    // --- UPDATED FIX FOR SECRET MENU TEXT ---
     if (!GPIO_CheckBit(&GPIOC->DATA, GPIOC_PIN_PTT) ||
          KEYBOARD_Poll() != KEY_INVALID ||
          BootMode != BOOT_MODE_NORMAL)
     {
-        // Wipe screen and top row BEFORE showing "RELEASE KEYS"
+        // 1. Wipe everything first
         UI_DisplayClear();      
-        ST7565_BlitFullScreen(); 
         memset(gStatusLine, 0, sizeof(gStatusLine));
+
+        // 2. Draw the text to the buffer
+        UI_DisplayReleaseKeys();
+
+        // 3. Push EVERYTHING to the physical screen at once
+        ST7565_BlitFullScreen(); 
         ST7565_BlitStatusLine();
 
-        UI_DisplayReleaseKeys();
         BACKLIGHT_TurnOn();
 
         for (int i = 0; i < 50;)
@@ -221,8 +225,8 @@ void Main(void)
         else
         {
             UI_DisplayClear();      
-            ST7565_BlitFullScreen(); 
             memset(gStatusLine, 0, sizeof(gStatusLine));
+            ST7565_BlitFullScreen(); 
             ST7565_BlitStatusLine();
             BACKLIGHT_TurnOn();
         }
